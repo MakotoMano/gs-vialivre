@@ -1,5 +1,6 @@
-const LOCAL = window.VIALIVRE?.mode === 'local';
-export {LOCAL};
+const ONLINE = window.VIALIVRE?.mode === 'online';
+const SERVER = ONLINE || window.VIALIVRE?.mode === 'local';
+export {SERVER, ONLINE};
 export async function request(path, options = {}) {
   let response;
   try {
@@ -10,7 +11,7 @@ export async function request(path, options = {}) {
     });
   } catch (error) {
     if (error.name === 'AbortError') throw error;
-    throw new Error('Não foi possível conectar ao servidor local. Confira se ele continua aberto e tente novamente.');
+    throw new Error('Não foi possível conectar ao servidor. Aguarde alguns instantes e tente novamente.');
   }
   if (response.status === 204) return null;
   const data = await response.json().catch(() => null);

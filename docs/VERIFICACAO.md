@@ -8,3 +8,10 @@ Data: 15/11/2026.
 - Navegador: cadastro com arquivo, revisão, mapa, recarregamento, exclusão e layout em 390 e 1440 pixels, sem erros de execução observados. Também foram verificados o consentimento de envio, a preservação da fotografia após falha controlada do serviço e a recuperação após indisponibilidade do servidor.
 
 Testes manuais: o responsável pelo projeto confirmou o funcionamento da análise real, da revisão e da exibição no mapa. Essa confirmação não constitui uma medição de acurácia. Ainda falta documentar um conjunto de fotografias e seus resultados para avaliação quantitativa. Não há hospedagem desta versão local, contas de usuários ou aferição de conformidade normativa.
+
+## Preparação da edição online
+
+- 23 testes da API: 15 de regras existentes e 8 de contas, sessões, permissões, privacidade, cotas e bloqueios de configuração inadequada.
+- 6 testes de regras da interface.
+- Navegador: cadastro por convite, autenticação, envio privado, revisão autorizada, consulta pública e layout de celular.
+- O armazenamento PostgreSQL e a implantação remota precisam de verificação no destino antes de declarar a publicação concluída.

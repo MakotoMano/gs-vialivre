@@ -1,6 +1,6 @@
 import {CATEGORIES,STATUS,PLACES,DEMO_DATE,seedRecords,filterRecords,metrics,validateDraft,reviewRecord,csvAggregate} from './core.js';
-import {LOCAL,request} from './api.js';
-let serviceHealth=null,loading=LOCAL,analysisController;
+import {SERVER,ONLINE,request} from './api.js';
+let serviceHealth=null,loading=SERVER,analysisController,sessionUser=null;
 const KEY='vialivre.prototype.v1',app=document.querySelector('#app'),modal=document.querySelector('#modal');
 const paths={
  grid:'M3 3h7v7H3z M14 3h7v7h-7z M3 14h7v7H3z M14 14h7v7h-7z',
@@ -29,21 +29,22 @@ function opts(items,value,blank){return (blank?'<option value="">'+blank+'</opti
 const fmtDate=d=>new Intl.DateTimeFormat('pt-BR',{day:'2-digit',month:'short'}).format(new Date(d));
 const fmtFull=d=>new Intl.DateTimeFormat('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit',timeZone:'America/Sao_Paulo'}).format(new Date(d));
 let records,storageProblem=false;
-try{const raw=LOCAL?'[]':localStorage.getItem(KEY);records=raw?JSON.parse(raw):seedRecords();if(!Array.isArray(records)||records.some(r=>!r.id||!CATEGORIES[r.category]||!STATUS[r.status]||!Array.isArray(r.history)))throw Error();}
-catch{records=LOCAL?[]:seedRecords();storageProblem=true;}
+try{const raw=SERVER?'[]':localStorage.getItem(KEY);records=raw?JSON.parse(raw):seedRecords();if(!Array.isArray(records)||records.some(r=>!r.id||!CATEGORIES[r.category]||!STATUS[r.status]||!Array.isArray(r.history)))throw Error();}
+catch{records=SERVER?[]:seedRecords();storageProblem=true;}
 let route='overview',filters={search:'',category:'',status:'',period:''},map,markers={},pickerMap,draft,analysisTimer,toastTimer,focusBefore,detailId;
 function save(next){try{localStorage.setItem(KEY,JSON.stringify(next));records=next;return true;}catch{const message='Não foi possível salvar. O armazenamento do navegador pode estar cheio ou bloqueado.';const error=modal.querySelector('.form-error');if(error)error.textContent=message;else toast(message);return false;}}
 function toast(message){const el=document.querySelector('#toast');el.textContent=message;el.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>el.classList.remove('show'),4800);}
 function currentRecords(){return filterRecords(records,filters,new Date(Math.max(new Date(DEMO_DATE).getTime(),Date.now())));}
 function categoryLegend(){return Object.entries(CATEGORIES).filter(([k])=>k!=='inconclusiva').map(([k,v])=>'<span><i style="background:'+v.color+'"></i>'+v.short+'</span>').join('');}
 const routeLabels={overview:'Visão geral',map:'Explorar mapa',records:'Ocorrências',review:'Fila de revisão',about:'Sobre o projeto'};
-function navLink(key,ico){return '<a class="nav-link '+(route===key?'active':'')+'" href="#'+key+'" '+(route===key?'aria-current="page"':'')+' aria-label="'+routeLabels[key]+'">'+icon(ico)+'<span>'+routeLabels[key]+'</span>'+(key==='review'?'<b class="count">'+metrics(records).pending+'</b>':'')+'</a>';}
+function navLink(key,ico){if(ONLINE&&key==='review'&&sessionUser?.role!=='reviewer')return '';return '<a class="nav-link '+(route===key?'active':'')+'" href="#'+key+'" '+(route===key?'aria-current="page"':'')+' aria-label="'+routeLabels[key]+'">'+icon(ico)+'<span>'+routeLabels[key]+'</span>'+(key==='review'?'<b class="count">'+metrics(records).pending+'</b>':'')+'</a>';}
 function shell(){
  if(map){map.stop();map.remove();map=null;}markers={};
  app.innerHTML='<aside class="sidebar" aria-label="Navegação principal"><button class="icon-btn close-menu" data-action="menu" aria-label="Fechar menu">×</button><a class="brand" href="#overview"><img src="./assets/logo.svg" alt=""><span class="brand-name">ViaLivre<small>Cidades para todos</small></span></a><div class="nav-label">Monitoramento</div><nav>'+navLink('overview','grid')+navLink('map','map')+navLink('records','list')+navLink('review','shield')+'</nav><div class="side-bottom">'+navLink('about','info')+'<div class="side-note">'+icon('list')+'<h4>Cada registro faz diferença.</h4><p>Um olhar atento hoje. Uma cidade mais acessível amanhã.</p></div><div class="profile"><div class="avatar">VL</div><div>Espaço de demonstração<small>CitizenTech · FIAP</small></div></div></div></aside><div class="workspace"><header class="topbar"><div class="breadcrumb"><button class="icon-btn menu-toggle" data-action="menu" aria-label="Abrir menu" aria-expanded="false">'+icon('menu')+'</button><span class="home-crumb">Monitoramento</span><span class="home-crumb">/</span><strong>'+routeLabels[route]+'</strong></div><div class="top-right"><span class="demo-tag">Ambiente de demonstração</span><button class="icon-btn" data-action="help" aria-label="Sobre esta demonstração">'+icon('info')+'</button><div class="avatar">VL</div></div></header><main id="main" tabindex="-1">'+page()+'<footer class="page-footer"><span>ViaLivre © 2026 · Tecnologia a serviço do cidadão</span><span>Dados fictícios. Registros não certificam a segurança de trajetos.</span></footer></main></div>';
- if(LOCAL){app.innerHTML=localCopy(app.innerHTML);const reset=app.querySelector('[data-action=reset]');reset?.closest('section')?.remove();if(loading){app.querySelector('main').innerHTML='<div class=helper>Carregando os registros do servidor…</div>';}else if(!serviceHealth){app.querySelector('main').innerHTML='<section class="panel prose"><h2>Servidor indisponível</h2><p>Não foi possível carregar os registros. Verifique se o servidor local continua aberto.</p>'+btn('Tentar novamente','reload','primary')+'</section>';}else{const main=app.querySelector('main');main.insertAdjacentHTML('afterbegin','<div class="helper service-status">'+icon(serviceHealth.analysisConfigured?'check':'info')+(serviceHealth.analysisConfigured?'Servidor conectado · classificação por fotografia configurada.':'Servidor conectado · classificação automática não configurada. O cadastro e a revisão manual estão disponíveis.')+'</div>');}}
+ if(SERVER){app.innerHTML=localCopy(app.innerHTML);const reset=app.querySelector('[data-action=reset]');reset?.closest('section')?.remove();if(loading){app.querySelector('main').innerHTML='<div class=helper>Carregando os registros do servidor…</div>';}else if(!serviceHealth){app.querySelector('main').innerHTML='<section class="panel prose"><h2>Servidor indisponível</h2><p>Não foi possível carregar os registros. Verifique se o servidor local continua aberto.</p>'+btn('Tentar novamente','reload','primary')+'</section>';}else{const main=app.querySelector('main');main.insertAdjacentHTML('afterbegin','<div class="helper service-status">'+icon(serviceHealth.analysisConfigured?'check':'info')+(serviceHealth.analysisConfigured?'Servidor conectado · classificação por fotografia configurada.':'Servidor conectado · classificação automática não configurada. O cadastro e a revisão manual estão disponíveis.')+'</div>');}}
+ if(ONLINE)onlineShell();
  syncMobileMenu(false);bindFilters();
- if(LOCAL&&(loading||!serviceHealth))return;
+ if(SERVER&&(loading||!serviceHealth))return;
  if(route==='overview')initMap('overview-map',records.filter(r=>r.status==='validado'),false);
  if(route==='map')initMap('explore-map',currentRecords().filter(r=>r.status==='validado'),true);
 }
@@ -66,11 +67,12 @@ function localCopy(html){
  'A ocorrência e a imagem associada serão removidas deste navegador.':'A ocorrência e a imagem associada serão removidas do banco local.'
  };
  for(const [from,to] of Object.entries(replacements))html=html.replaceAll(from,to);
+ if(ONLINE)html=onlineCopy(html);
  return html;
 }
-async function refreshLocal(){
+async function refreshServer(){
  loading=true;shell();
- try{const [health,data]=await Promise.all([request('/health'),request('/records')]);serviceHealth=health;records=data;}
+ try{const [health,data,identity]=await Promise.all([request('/health'),request('/records'),ONLINE?request('/auth/me'):Promise.resolve(null)]);serviceHealth=health;records=data;if(ONLINE)sessionUser=identity.user;}
  catch(e){serviceHealth=null;toast(e.message);}
  finally{loading=false;shell();}
 }
@@ -82,6 +84,7 @@ function table(rows){return rows.length?'<div class="table-scroll"><table><thead
 function empty(title,text){return '<div class="empty">'+icon('search')+'<h3>'+title+'</h3><p>'+text+'</p></div>';}
 function page(){
  const m=metrics(records);
+ if(ONLINE&&route==='review'&&sessionUser?.role!=='reviewer')return heading('Revisão de ocorrências','Esta área é reservada à equipe de revisão.')+empty('Acesso restrito','Você pode acompanhar seus envios na página Ocorrências.');
  if(route==='overview'){
  const cats=Object.entries(m.categories).filter(([,v])=>v>0).sort((a,b)=>b[1]-a[1]);
  return heading('Uma cidade mais acessível, juntos.','Acompanhe os registros e transforme observações em informação.')+
@@ -130,11 +133,11 @@ function initMap(id,rows,interactive){
  if(rows.length)map.fitBounds(rows.map(r=>[r.lat,r.lng]),{padding:[38,38],maxZoom:14,animate:false});
  const activeMap=map;setTimeout(()=>{if(map===activeMap)activeMap.invalidateSize({animate:false,pan:false});},40);
 }
-function openModal(html){if(LOCAL)html=localCopy(html);if(!modal.open){focusBefore=document.activeElement;modal.showModal();}if(pickerMap){pickerMap.remove();pickerMap=null;}modal.innerHTML=html;modal.scrollTop=0;setTimeout(()=>modal.querySelector('input:not([type=file]),select,button')?.focus(),30);}
+function openModal(html){if(SERVER)html=localCopy(html);if(!modal.open){focusBefore=document.activeElement;modal.showModal();}if(pickerMap){pickerMap.remove();pickerMap=null;}modal.innerHTML=html;modal.scrollTop=0;setTimeout(()=>modal.querySelector('input:not([type=file]),select,button')?.focus(),30);}
 function closeModal(){analysisController?.abort();analysisController=null;clearTimeout(analysisTimer);if(pickerMap){pickerMap.remove();pickerMap=null;}modal.close();modal.innerHTML='';draft=null;focusBefore?.focus?.();}
 function modalHead(title,sub){return '<div class="modal-head"><div><h2 id="modal-title">'+title+'</h2>'+(sub?'<p>'+sub+'</p>':'')+'</div><button class="icon-btn" data-action="close" aria-label="Fechar">'+icon('x')+'</button></div>';}
 function steps(active){return '<div class="steps">'+['Registro','Preparação','Conferência'].map((s,i)=>(i?'<i></i>':'')+'<span class="'+(active===i?'current':'')+'"><b>'+(i+1)+'</b>'+s+'</span>').join('')+'</div>';}
-function startNew(){draft={image:'',illustration:false,address:PLACES[0].name,area:PLACES[0].area,lat:PLACES[0].lat,lng:PLACES[0].lng,userDescription:'',scenario:'dano',category:'dano'};formStep();}
+function startNew(){if(ONLINE&&!sessionUser){authDialog();return;}draft={image:'',illustration:false,address:PLACES[0].name,area:PLACES[0].area,lat:PLACES[0].lat,lng:PLACES[0].lng,userDescription:'',scenario:'dano',category:'dano'};formStep();}
 function formStep(){
  openModal(modalHead('Registrar uma ocorrência','Uma observação pode ajudar muitas pessoas.')+'<div class="modal-body">'+steps(0)+
  '<div class="field"><label for="photo">Fotografia da barreira</label><div class="upload" id="dropzone">'+(draft.image?'<img src="'+esc(draft.image)+'" alt="Imagem selecionada"><small>Toque para substituir a imagem</small>':icon('upload')+'<strong>Escolha uma foto ou arraste para cá</strong><small>JPG, PNG ou WebP · até 8 MB</small>')+'<input id="photo" type="file" accept="image/jpeg,image/png,image/webp" aria-label="Selecionar fotografia"></div></div><div class="upload-tools"><span>A imagem permanece neste navegador.</span><button class="text-link" data-action="example">'+icon('image')+' Usar imagem de exemplo</button></div>'+
@@ -143,12 +146,12 @@ function formStep(){
  '<button class="text-link" data-action="picker">'+icon('map')+' Ajustar localização no mapa</button><div id="picker-slot"></div>'+
  '<div class="field" style="margin-top:20px"><label for="user-description">O que você observou? <span style="font-weight:400;color:var(--muted)">(opcional)</span></label><textarea id="user-description" maxlength="500" placeholder="Descreva a barreira e como ela pode dificultar a passagem…">'+esc(draft.userDescription)+'</textarea></div>'+
  '<div class="field"><label for="scenario">Cenário de demonstração</label><select id="scenario">'+opts({...CATEGORIES,erro:'Falha temporária do serviço'},draft.scenario)+'</select><small>O cenário selecionado preenche uma categoria e uma descrição de exemplo para testar o fluxo.</small></div><div class="form-error" id="form-error" role="alert"></div></div><div class="modal-footer">'+btn('Cancelar','close')+btn('Continuar','analyze','primary','arrow')+'</div>');
- if(LOCAL){modal.querySelector('.upload-tools').innerHTML='<span>A foto será salva no banco local ao enviar o registro.</span>';modal.querySelector('#address').closest('.field').insertAdjacentHTML('afterend','<div class=field><label for=area>Bairro ou região</label><input id=area maxlength=100 value="'+esc(draft.area)+'"></div><div class=coordinate-fields><div class=field><label for=latitude>Latitude</label><input id=latitude type=number step=0.00001 min=-90 max=90 value="'+draft.lat+'"></div><div class=field><label for=longitude>Longitude</label><input id=longitude type=number step=0.00001 min=-180 max=180 value="'+draft.lng+'"></div></div>');const scenario=modal.querySelector('#scenario');scenario.closest('.field').innerHTML='<div class=helper>Você pode classificar manualmente. O envio ao serviço externo é opcional e exige autorização.</div><label class=consent><input type=checkbox id=external-consent> Autorizo enviar esta fotografia ao serviço de classificação externo.</label>';const next=modal.querySelector('[data-action=analyze]');next.textContent='Classificar fotografia';next.disabled=!serviceHealth?.analysisConfigured;next.insertAdjacentHTML('beforebegin',btn('Classificar manualmente','local-manual','','edit'));}
+ if(SERVER){modal.querySelector('.upload-tools').innerHTML='<span>'+(ONLINE?'A foto será salva no servidor e ficará pública após a validação. Evite rostos, placas e documentos.':'A foto será salva no banco local ao enviar o registro.')+'</span>';modal.querySelector('#address').closest('.field').insertAdjacentHTML('afterend','<div class=field><label for=area>Bairro ou região</label><input id=area maxlength=100 value="'+esc(draft.area)+'"></div><div class=coordinate-fields><div class=field><label for=latitude>Latitude</label><input id=latitude type=number step=0.00001 min=-90 max=90 value="'+draft.lat+'"></div><div class=field><label for=longitude>Longitude</label><input id=longitude type=number step=0.00001 min=-180 max=180 value="'+draft.lng+'"></div></div>');const scenario=modal.querySelector('#scenario');scenario.closest('.field').innerHTML='<div class=helper>Você pode classificar manualmente. O envio ao serviço externo é opcional e exige autorização.</div><label class=consent><input type=checkbox id=external-consent> Autorizo enviar esta fotografia ao serviço de classificação externo.</label>';const next=modal.querySelector('[data-action=analyze]');next.textContent='Classificar fotografia';next.disabled=!serviceHealth?.analysisConfigured;next.insertAdjacentHTML('beforebegin',btn('Classificar manualmente','local-manual','','edit'));}
  document.querySelector('#photo').addEventListener('change',e=>loadPhoto(e.target.files[0]));
  const drop=document.querySelector('#dropzone');drop.addEventListener('dragover',e=>{e.preventDefault();drop.classList.add('dragging');});drop.addEventListener('dragleave',()=>drop.classList.remove('dragging'));drop.addEventListener('drop',e=>{e.preventDefault();drop.classList.remove('dragging');loadPhoto(e.dataTransfer.files[0]);});
- document.querySelector('#place').addEventListener('change',e=>{const p=PLACES[Number(e.target.value)];draft={...draft,...p,address:p.name};document.querySelector('#address').value=p.name;if(LOCAL){document.querySelector('#area').value=p.area;document.querySelector('#latitude').value=p.lat;document.querySelector('#longitude').value=p.lng;}document.querySelector('#coordinates').textContent=p.lat.toFixed(5)+', '+p.lng.toFixed(5);if(pickerMap){pickerMap.setView([p.lat,p.lng],15);showPicker();}});
+ document.querySelector('#place').addEventListener('change',e=>{const p=PLACES[Number(e.target.value)];draft={...draft,...p,address:p.name};document.querySelector('#address').value=p.name;if(SERVER){document.querySelector('#area').value=p.area;document.querySelector('#latitude').value=p.lat;document.querySelector('#longitude').value=p.lng;}document.querySelector('#coordinates').textContent=p.lat.toFixed(5)+', '+p.lng.toFixed(5);if(pickerMap){pickerMap.setView([p.lat,p.lng],15);showPicker();}});
 }
-function captureDraft(){if(!draft)return;if(LOCAL){draft.area=document.querySelector('#area')?.value??draft.area;if(document.querySelector('#latitude')){draft.lat=(document.querySelector('#latitude').value.trim()?Number(document.querySelector('#latitude').value):NaN);draft.lng=(document.querySelector('#longitude').value.trim()?Number(document.querySelector('#longitude').value):NaN);}}draft.address=document.querySelector('#address')?.value??draft.address;draft.userDescription=document.querySelector('#user-description')?.value??draft.userDescription;draft.scenario=document.querySelector('#scenario')?.value??draft.scenario;}
+function captureDraft(){if(!draft)return;if(SERVER){draft.area=document.querySelector('#area')?.value??draft.area;if(document.querySelector('#latitude')){draft.lat=(document.querySelector('#latitude').value.trim()?Number(document.querySelector('#latitude').value):NaN);draft.lng=(document.querySelector('#longitude').value.trim()?Number(document.querySelector('#longitude').value):NaN);}}draft.address=document.querySelector('#address')?.value??draft.address;draft.userDescription=document.querySelector('#user-description')?.value??draft.userDescription;draft.scenario=document.querySelector('#scenario')?.value??draft.scenario;}
 async function loadPhoto(file){
  if(!file)return;captureDraft();const error=document.querySelector('#form-error');
  if(!['image/jpeg','image/png','image/webp'].includes(file.type)){error.textContent='Escolha uma imagem JPG, PNG ou WebP.';return;}
@@ -164,10 +167,10 @@ function showPicker(){
  document.querySelector('#picker-slot').innerHTML='<div id="picker-map" class="picker-map" aria-label="Selecione um ponto aproximado no mapa"></div><small class="photo-caption">Clique no mapa para ajustar o ponto. A referência selecionada continua disponível por teclado.</small>';
  pickerMap=L.map('picker-map').setView([draft.lat,draft.lng],15);addBase(pickerMap);
  let point=L.marker([draft.lat,draft.lng],{icon:mapIcon('dano')}).addTo(pickerMap);
- pickerMap.on('click',e=>{draft.lat=Number(e.latlng.lat.toFixed(5));draft.lng=Number(e.latlng.lng.toFixed(5));point.setLatLng([draft.lat,draft.lng]);if(LOCAL){document.querySelector('#latitude').value=draft.lat;document.querySelector('#longitude').value=draft.lng;}document.querySelector('#coordinates').textContent=draft.lat.toFixed(5)+', '+draft.lng.toFixed(5);});
+ pickerMap.on('click',e=>{draft.lat=Number(e.latlng.lat.toFixed(5));draft.lng=Number(e.latlng.lng.toFixed(5));point.setLatLng([draft.lat,draft.lng]);if(SERVER){document.querySelector('#latitude').value=draft.lat;document.querySelector('#longitude').value=draft.lng;}document.querySelector('#coordinates').textContent=draft.lat.toFixed(5)+', '+draft.lng.toFixed(5);});
 }
 function analyze(){
- if(LOCAL){analyzeLocal();return;}
+ if(SERVER){analyzeLocal();return;}
  captureDraft();const error=validateDraft(draft);if(error){document.querySelector('#form-error').textContent=error;return;}
  openModal(modalHead('Preparando a ocorrência','Organização dos dados do registro')+'<div class="modal-body">'+steps(1)+'<div class="analysis"><div class="scan">'+icon('list')+'</div><h3>Organizando o registro…</h3><p>Carregando a categoria e a descrição selecionadas.</p><div class="analysis-progress"><span></span><span></span><span></span></div><p>Demonstração local · nenhuma imagem é enviada</p></div></div>');
  analysisTimer=setTimeout(()=>{
@@ -203,8 +206,8 @@ async function submitDraft(){
  const description=document.querySelector('#review-description').value.trim();if(!description){document.querySelector('#form-error').textContent='Preencha a descrição da ocorrência.';return;}
  const date=new Date().toISOString();const id='VL-'+Date.now().toString(36).toUpperCase();
  const record={id,category:document.querySelector('#review-category').value,suggestedCategory:draft.suggestedCategory,description,userDescription:draft.userDescription,address:draft.address.trim(),area:draft.area,lat:draft.lat,lng:draft.lng,date,status:'pendente',image:draft.image,illustration:draft.illustration,source:'usuario',reviewedBy:null,history:[{date,action:'Ocorrência registrada'},{date,action:'Enviada para revisão humana'}]};
- if(LOCAL){const button=modal.querySelector('[data-action=submit]');button.disabled=true;button.dataset.busy='true';try{const result=await request('/records',{method:'POST',body:JSON.stringify({image:draft.image,address:draft.address.trim(),area:draft.area,lat:draft.lat,lng:draft.lng,userDescription:draft.userDescription,category:record.category,description,analysisId:draft.analysisId||null})});records=[...records,result];}catch(e){document.querySelector('#form-error').textContent=e.message;button.disabled=false;delete button.dataset.busy;return;}}else if(!save([...records,record]))return;
- closeModal();setRoute('review');toast('Ocorrência enviada para revisão. Você já pode validá-la.');
+ if(SERVER){const button=modal.querySelector('[data-action=submit]');button.disabled=true;button.dataset.busy='true';try{const result=await request('/records',{method:'POST',body:JSON.stringify({image:draft.image,address:draft.address.trim(),area:draft.area,lat:draft.lat,lng:draft.lng,userDescription:draft.userDescription,category:record.category,description,analysisId:draft.analysisId||null})});records=[...records,result];}catch(e){document.querySelector('#form-error').textContent=e.message;button.disabled=false;delete button.dataset.busy;return;}}else if(!save([...records,record]))return;
+ closeModal();setRoute(ONLINE&&sessionUser?.role!=='reviewer'?'records':'review');toast(ONLINE?'Ocorrência enviada para a equipe de revisão.':'Ocorrência enviada para revisão. Você já pode validá-la.');
 }
 function openDetail(id){
  const r=records.find(r=>r.id===id);if(!r)return;detailId=id;
@@ -212,18 +215,19 @@ function openDetail(id){
  '<dl class="detail-meta"><div><dt>Região</dt><dd>'+esc(r.area)+'</dd></div><div><dt>Registrada em</dt><dd>'+fmtFull(r.date)+'</dd></div><div><dt>Localização aproximada</dt><dd>'+r.lat.toFixed(5)+', '+r.lng.toFixed(5)+'</dd></div><div><dt>Revisão</dt><dd>'+esc(r.reviewedBy||'Aguardando análise humana')+'</dd></div></dl>'+
  (r.userDescription?'<h3>Observação do cidadão</h3><p class="photo-caption">'+esc(r.userDescription)+'</p>':'')+
  '<h3>Histórico do registro</h3><ul class="timeline">'+r.history.map(h=>'<li>'+esc(h.action)+'<small>'+fmtFull(h.date)+'</small></li>').join('')+'</ul><div class="form-error" id="detail-error" role="alert"></div></div><div class="modal-footer">'+btn('Excluir','delete','danger','trash')+'<div class="button-row">'+(r.status==='pendente'?btn('Rejeitar','reject')+btn('Validar ocorrência','validate','primary','check'):btn('Devolver à revisão','reopen')+btn('Salvar alterações','save-detail','primary','check'))+'</div></div>');
+ if(ONLINE&&sessionUser?.role!=='reviewer'){modal.querySelectorAll('select,textarea').forEach(el=>el.disabled=true);modal.querySelector('.modal-footer').innerHTML=btn('Fechar','close');}
 }
 async function updateDetail(status){
  const r=records.find(r=>r.id===detailId);
  try{const updated=reviewRecord(r,document.querySelector('#detail-category').value,document.querySelector('#detail-description').value,status);
- if(LOCAL){const buttons=modal.querySelectorAll('.modal-footer button');buttons.forEach(b=>{b.disabled=true;b.dataset.busy='true';});try{const result=await request('/records/'+r.id,{method:'PATCH',body:JSON.stringify({category:updated.category,description:updated.description,status,version:r.version})});records=records.map(v=>v.id===r.id?result:v);closeModal();shell();toast('Revisão salva no banco local.');}finally{buttons.forEach(b=>{b.disabled=false;delete b.dataset.busy;});}return;}
+ if(SERVER){const buttons=modal.querySelectorAll('.modal-footer button');buttons.forEach(b=>{b.disabled=true;b.dataset.busy='true';});try{const result=await request('/records/'+r.id,{method:'PATCH',body:JSON.stringify({category:updated.category,description:updated.description,status,version:r.version})});records=records.map(v=>v.id===r.id?result:v);closeModal();shell();toast(ONLINE?'Revisão salva.':'Revisão salva no banco local.');}finally{buttons.forEach(b=>{b.disabled=false;delete b.dataset.busy;});}return;}
  if(save(records.map(v=>v.id===r.id?updated:v))){closeModal();shell();toast(status==='validado'?'Ocorrência validada. O mapa e os indicadores foram atualizados.':status==='rejeitado'?'Ocorrência rejeitada. Ela não será exibida no mapa.':'Ocorrência devolvida à fila de revisão.');}}
  catch(e){document.querySelector('#detail-error').textContent=e.message;}
 }
 async function deleteLocal(){
  const r=records.find(r=>r.id===detailId);if(!r)return;
  const button=modal.querySelector('[data-action=confirm-delete]');button.disabled=true;button.dataset.busy='true';
- try{await request('/records/'+r.id+'?version='+r.version,{method:'DELETE'});records=records.filter(v=>v.id!==r.id);closeModal();shell();toast('Ocorrência e fotografia excluídas do banco local.');}
+ try{await request('/records/'+r.id+'?version='+r.version,{method:'DELETE'});records=records.filter(v=>v.id!==r.id);closeModal();shell();toast(ONLINE?'Ocorrência e fotografia excluídas.':'Ocorrência e fotografia excluídas do banco local.');}
  catch(e){button.disabled=false;delete button.dataset.busy;toast(e.message);}
 }
 function confirmAction(action){
@@ -237,8 +241,13 @@ document.addEventListener('click',e=>{if(document.querySelector('.sidebar')?.cla
 function setRoute(next){if(location.hash==='#'+next){route=next;filters={search:'',category:'',status:'',period:''};shell();}else location.hash=next;}
 document.addEventListener('click',e=>{
  const el=e.target.closest('[data-action]');if(!el)return;const action=el.dataset.action;
+ if(action==='login')authDialog();
+ if(action==='register')authDialog(true);
+ if(action==='login-submit')submitAuth(false);
+ if(action==='register-submit')submitAuth(true);
+ if(action==='logout')logout();
  if(action==='menu')syncMobileMenu(!document.querySelector('.sidebar').classList.contains('open'));
- if(action==='new'&&(!LOCAL||serviceHealth))startNew();
+ if(action==='new'&&(!SERVER||serviceHealth))startNew();
  if(action==='close'&&!modal.querySelector('.modal-footer [data-busy]'))closeModal();
  if(action==='detail'||action==='map-detail')openDetail(el.dataset.id);
  if(action==='help')setRoute('about');
@@ -249,7 +258,7 @@ document.addEventListener('click',e=>{
  if(action==='analyze')analyze();
  if(action==='back')formStep();
  if(action==='local-manual')manualLocal();
- if(action==='reload')refreshLocal();
+ if(action==='reload')refreshServer();
  if(action==='manual'){draft.analysisId=null;draft.category='inconclusiva';draft.suggestedCategory='inconclusiva';draft.description='';reviewDraft();}
  if(action==='submit')submitDraft();
  if(action==='validate')updateDetail('validado');
@@ -258,11 +267,61 @@ document.addEventListener('click',e=>{
  if(action==='save-detail')updateDetail(records.find(r=>r.id===detailId).status);
  if(action==='delete'||action==='reset')confirmAction(action);
  if(action==='cancel-delete')openDetail(detailId);
- if(action==='confirm-delete'){if(LOCAL){deleteLocal();return;}if(save(records.filter(r=>r.id!==detailId))){closeModal();shell();toast('Ocorrência excluída deste navegador.');}}
- if(action==='confirm-reset'&&!LOCAL){if(save(seedRecords())){closeModal();shell();toast('Demonstração restaurada com os 24 registros iniciais.');}}
+ if(action==='confirm-delete'){if(SERVER){deleteLocal();return;}if(save(records.filter(r=>r.id!==detailId))){closeModal();shell();toast('Ocorrência excluída deste navegador.');}}
+ if(action==='confirm-reset'&&!SERVER){if(save(seedRecords())){closeModal();shell();toast('Demonstração restaurada com os 24 registros iniciais.');}}
 });
 modal.addEventListener('cancel',e=>{e.preventDefault();if(!modal.querySelector('.modal-footer [data-busy]'))closeModal();});
 window.addEventListener('hashchange',()=>{route=location.hash.slice(1) in routeLabels?location.hash.slice(1):'overview';filters={search:'',category:'',status:'',period:''};shell();window.scrollTo({top:0});});
-window.addEventListener('storage',e=>{if(!LOCAL&&e.key===KEY&&e.newValue){try{const latest=JSON.parse(e.newValue);if(Array.isArray(latest)){records=latest;if(!modal.open)shell();}}catch{}}});
+window.addEventListener('storage',e=>{if(!SERVER&&e.key===KEY&&e.newValue){try{const latest=JSON.parse(e.newValue);if(Array.isArray(latest)){records=latest;if(!modal.open)shell();}}catch{}}});
 route=location.hash.slice(1) in routeLabels?location.hash.slice(1):'overview';
-shell();if(LOCAL)await refreshLocal();if(storageProblem)toast('Não foi possível recuperar os dados locais. Exibindo os exemplos de demonstração.');
+shell();if(SERVER)await refreshServer();if(storageProblem)toast('Não foi possível recuperar os dados locais. Exibindo os exemplos de demonstração.');
+
+
+function onlineCopy(html){
+ const replacements={
+  'Espaço local':'Comunidade ViaLivre','MVP local':'ViaLivre online',
+  'Registros locais. A revisão não certifica a segurança dos trajetos.':'A revisão não certifica a segurança dos trajetos.',
+  'Registros salvos no banco local':'Registros disponíveis para sua conta',
+  'Dados salvos no servidor local':'Registros compartilhados e seus envios',
+  'Você está usando o papel de revisor local, sem contas individuais.':'Você está usando uma conta da equipe de revisão.',
+  'Esta versão utiliza um servidor local e banco SQLite. As fotografias e o histórico permanecem salvos após fechar o navegador.':'A versão online mantém os registros e as fotografias em armazenamento persistente. Colaboradores enviam ocorrências, e a equipe revisa antes da publicação no mapa.',
+  'Limites da versão local':'Limites da versão online',
+  'O banco começa vazio. Não há integração com prefeituras, certificação de acessibilidade ou recomendação de rotas. Esta versão funciona somente neste computador, com um revisor local e sem contas individuais.':'Não há integração com prefeituras, certificação de acessibilidade ou recomendação de rotas. As contas de colaboradores são criadas por convite. O serviço pode levar um pouco para abrir após ficar inativo e tem limites de uso.',
+  'Confirme a alteração no banco local':'Confirme a alteração do registro',
+  'A ocorrência e a imagem associada serão removidas do banco local.':'A ocorrência e a fotografia serão removidas do armazenamento do projeto.',
+  'A foto será salva no banco local ao enviar o registro.':'A foto será salva no servidor e ficará pública após a validação. Evite rostos, placas e documentos.',
+  'Cadastro local':'Cadastro online'
+ };
+ for(const [from,to] of Object.entries(replacements))html=html.replaceAll(from,to);
+ return html;
+}
+function onlineShell(){
+ const top=app.querySelector('.top-right');
+ top?.querySelector('.avatar')?.remove();
+ if(top)top.insertAdjacentHTML('beforeend',sessionUser?'<span class="account-name">'+esc(sessionUser.username)+'</span>'+btn('Sair','logout','small'):btn('Entrar','login','small'));
+ if(sessionUser?.role!=='reviewer')app.querySelector('.review-card')?.remove();
+ const status=app.querySelector('.service-status');
+ if(status&&!sessionUser)status.innerHTML=icon('info')+'Consulte os registros validados. Entre na sua conta para registrar uma ocorrência.';
+ const unavailable=app.querySelector('main');
+ if(unavailable&&!serviceHealth&&!loading)unavailable.innerHTML='<section class="panel prose"><h2>Servidor indisponível</h2><p>O serviço gratuito pode levar cerca de um minuto para iniciar. Aguarde e tente novamente.</p>'+btn('Tentar novamente','reload','primary')+'</section>';
+}
+function authDialog(register=false){
+ openModal(modalHead(register?'Criar conta de colaborador':'Entrar no ViaLivre',register?'Use o código de convite fornecido pela equipe.':'Acesse seus registros e as funções da sua conta.')+'<form id="auth-form"><div class="modal-body"><div class="field"><label for="auth-user">Usuário</label><input id="auth-user" autocomplete="username" minlength="3" maxlength="32" required></div><div class="field"><label for="auth-password">Senha</label><input id="auth-password" type="password" autocomplete="'+(register?'new-password':'current-password')+'" minlength="'+(register?'12':'1')+'" maxlength="128" required></div>'+(register?'<div class="field"><label for="auth-invite">Código de convite</label><input id="auth-invite" type="password" maxlength="128" required><small>Use uma senha com pelo menos 12 caracteres. Guarde-a: esta edição não possui recuperação por e-mail.</small></div>':'')+'<div class="form-error" id="auth-error" role="alert"></div></div><div class="modal-footer">'+(register?btn('Já tenho conta','login'):serviceHealth?.registrationOpen?btn('Criar conta','register'):btn('Cancelar','close'))+btn(register?'Criar conta':'Entrar',register?'register-submit':'login-submit','primary')+'</div></form>');
+ modal.querySelector('#auth-form').addEventListener('submit',e=>{e.preventDefault();submitAuth(register);});
+ modal.querySelectorAll('button').forEach(b=>b.type='button');
+ modal.querySelector('[data-action="'+(register?'register-submit':'login-submit')+'"]').type='submit';
+}
+async function submitAuth(register){
+ const form=modal.querySelector('#auth-form');if(!form?.reportValidity())return;
+ const buttons=modal.querySelectorAll('button');if([...buttons].some(b=>b.dataset.busy))return;
+ buttons.forEach(b=>{b.disabled=true;b.dataset.busy='true';});
+ try{
+ const payload={username:modal.querySelector('#auth-user').value,password:modal.querySelector('#auth-password').value};
+ if(register)payload.inviteCode=modal.querySelector('#auth-invite').value;
+ const result=await request('/auth/'+(register?'register':'login'),{method:'POST',body:JSON.stringify(payload)});
+ sessionUser=result.user;closeModal();await refreshServer();toast('Você entrou no ViaLivre.');
+ }catch(e){modal.querySelector('#auth-error').textContent=e.message;buttons.forEach(b=>{b.disabled=false;delete b.dataset.busy;});}
+}
+async function logout(){
+ try{await request('/auth/logout',{method:'POST',body:'{}'});sessionUser=null;route='overview';location.hash='overview';await refreshServer();toast('Você saiu da sua conta.');}catch(e){toast(e.message);}
+}

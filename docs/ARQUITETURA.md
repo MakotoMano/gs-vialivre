@@ -65,8 +65,12 @@ A criação, a revisão e a exclusão são transacionais. A fotografia e o regis
 7. O servidor não serve .env, código do backend nem o arquivo do banco. Apenas dist é servido como conteúdo estático.
 8. Requisições de alteração oriundas de outro site são bloqueadas. O uso previsto é restrito ao computador local.
 
-## Evolução para múltiplos usuários
+## Edição online
 
-A versão atual não implementa cadastro de usuários nem separação de permissões. Publicação compartilhada exige autenticação, autorização por papel, armazenamento adequado ao ambiente, gestão de segredos, limites de uso e migração de dados. FastAPI e o contrato da interface podem ser preservados; SQLite e o armazenamento das fotos podem ser substituídos quando houver infraestrutura definida.
+backend/database.py oferece armazenamento PostgreSQL, mantendo SQLite no modo local. O esquema privado vialivre é criado por deploy/schema.sql, e a conta do aplicativo tem apenas permissões de leitura e alteração das tabelas. Fotografias continuam no banco para garantir criação e exclusão conjuntas com os registros.
 
-O link publicado anteriormente contém apenas a demonstração. Esta versão local não foi publicada e não depende desse link.
+backend/auth.py implementa senhas com scrypt e sal aleatório, sessões revogáveis com tokens aleatórios armazenados apenas como resumos e cookies Secure/HttpOnly/SameSite. A consulta pública mostra registros validados; colaboradores autenticados também veem seus próprios envios; somente revisores podem modificar a revisão ou excluir registros. Contas de colaboradores exigem convite.
+
+As tentativas de login, os cadastros e as análises têm limites persistidos no banco. A classificação online só é habilitada quando ONLINE_ANALYSIS_ENABLED e FREE_TIER_CONFIRMED são true. Esses controles não substituem manter os provedores em planos gratuitos e sem cobrança de excedentes.
+
+Consulte docs/ONLINE.md para configuração e limitações. A hospedagem demonstrativa anterior continua separada. Não há migração automática de fotografias ou registros locais para a nuvem.

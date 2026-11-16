@@ -1,0 +1,31 @@
+services:
+  - type: web
+    name: gs-vialivre
+    runtime: python
+    plan: free
+    region: virginia
+    branch: main
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn backend.app:create_app --factory --host 0.0.0.0 --port $PORT --proxy-headers --forwarded-allow-ips=*
+    healthCheckPath: /api/health
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.14.0
+      - key: VIALIVRE_MODE
+        value: online
+      - key: DATABASE_URL
+        sync: false
+      - key: ADMIN_USERNAME
+        value: revisor
+      - key: ADMIN_PASSWORD
+        sync: false
+      - key: REGISTRATION_CODE
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: GEMINI_MODEL
+        value: gemini-4-hydrogen
+      - key: ONLINE_ANALYSIS_ENABLED
+        value: 'false'
+      - key: FREE_TIER_CONFIRMED
+        value: 'false'

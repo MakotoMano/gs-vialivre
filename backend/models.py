@@ -31,3 +31,12 @@ class RecordInput(StrictModel):
 class ReviewInput(AnalysisResult):
     status: Status
     version: int = Field(ge=1)
+
+class LoginInput(BaseModel):
+    model_config = ConfigDict(extra='forbid')
+    username: str = Field(min_length=3, max_length=32)
+    password: str = Field(min_length=1, max_length=128)
+
+class RegisterInput(LoginInput):
+    password: str = Field(min_length=12, max_length=128)
+    inviteCode: str = Field(min_length=1, max_length=128)

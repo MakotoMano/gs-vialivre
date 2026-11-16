@@ -1,6 +1,8 @@
-# ViaLivre — MVP acadêmico local
+# ViaLivre — MVP acadêmico
 
 Plataforma de monitoramento da acessibilidade urbana — CitizenTech / FIAP.
+
+O projeto pode ser executado localmente ou hospedado com servidor Python no Render Free e banco PostgreSQL no Supabase Free. Consulte [implantação online](docs/ONLINE.md) para contas, permissões, configuração e limites. A versão online usa HTTPS, login e cadastro de colaboradores por convite.
 
 ## Abrir no Windows
 
@@ -53,7 +55,7 @@ SQLite foi adotado para concluir a etapa local sem conta de nuvem. A proposta de
 ## Testes
 
 ```powershell
-.\.venv\Scripts\python.exe -m pytest tests/test_api.py -q
+.\.venv\Scripts\python.exe -m pytest tests/test_api.py tests/test_online.py -q
 node --test tests/core.test.js
 ```
 
@@ -61,7 +63,7 @@ O teste de navegador em `tests/browser-local.mjs` requer Playwright instalado se
 
 ## Dados e limites
 
-Esta é uma versão **local, de um único operador**, sem contas individuais. O servidor inicia vinculado a 127.0.0.1. Não exponha esta configuração como serviço público: uma versão compartilhada precisa de autenticação, permissões e infraestrutura próprias.
+O modo **local** é de um único operador, sem exigir contas. O modo **online** possui contas individuais de colaboradores e uma conta de revisor. O servidor inicia vinculado a 127.0.0.1. Para publicar, use VIALIVRE_MODE=online e a configuração descrita em docs/ONLINE.md; não exponha o modo local como serviço público.
 
 As fotos são reduzidas no navegador, verificadas novamente no servidor e convertidas para JPEG sem preservar os metadados originais. Endereço e coordenadas são informados pelo usuário. Não há geocodificação, reconhecimento de identidade ou certificação de acessibilidade. Evite fotografar rostos, placas e documentos; escolha imagens adequadas para a apresentação.
 
@@ -71,7 +73,7 @@ Para backup, encerre o servidor e copie a pasta **data** inteira. Ela pode conte
 
 ## Protótipo anterior
 
-`Abrir_ViaLivre.html` é a demonstração anterior, com 24 registros fictícios e dados no navegador. `npm run demo` inicia essa experiência em arquivos separados na porta 4173. Ela não utiliza o banco do MVP. A versão publicada anteriormente continua sendo demonstrativa; esta entrega foi preparada apenas para execução local.
+`Abrir_ViaLivre.html` é a demonstração anterior, com 24 registros fictícios e dados no navegador. `npm run demo` inicia essa experiência em arquivos separados na porta 4173. Ela não utiliza o banco do MVP. A versão publicada anteriormente no endereço de demonstração continua sendo demonstrativa. A implantação Render/Supabase é independente e utiliza a edição online documentada neste repositório.
 
 O ZIP era apenas uma embalagem para transferência de arquivos. Não é uma tecnologia nem uma dependência: nesta pasta o projeto está descompactado e pronto para execução.
 
