@@ -1,0 +1,14 @@
+ViaLivre — MVP local
+
+1. Abra Iniciar_ViaLivre.cmd.
+2. Mantenha a janela do servidor aberta.
+3. Acesse http://127.0.0.1:8000 se o navegador não abrir.
+4. Cadastre uma fotografia e escolha Classificar manualmente.
+5. Envie para revisão e valide para mostrar a ocorrência no mapa.
+
+Os registros e fotos ficam em data/vialivre.sqlite3.
+A classificação externa depende da configuração de uma chave em .env.
+As instruções completas estão no README.md.
+
+Em outro computador: instale Python 3.14 e execute Instalar_ViaLivre.cmd.
+Abrir_ViaLivre.html é somente a demonstração anterior; não usa o banco local.

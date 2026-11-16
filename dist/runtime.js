@@ -1,0 +1,1 @@
+window.VIALIVRE = {mode: 'demo'};

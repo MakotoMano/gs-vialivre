@@ -1,0 +1,11 @@
+{
+  "name": "vialivre",
+  "version": "2.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node launch.mjs",
+    "demo": "node server.mjs",
+    "test": "node --test tests/*.test.js"
+  }
+}
