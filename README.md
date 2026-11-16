@@ -77,8 +77,6 @@ Para backup, encerre o servidor e copie a pasta **data** inteira. Ela pode conte
 
 `Abrir_ViaLivre.html` é a demonstração anterior, com 24 registros fictícios e dados no navegador. `npm run demo` inicia essa experiência em arquivos separados na porta 4173. Ela não utiliza o banco do MVP. A versão publicada anteriormente no endereço de demonstração continua sendo demonstrativa. A implantação Render/Supabase é independente e utiliza a edição online documentada neste repositório.
 
-O ZIP era apenas uma embalagem para transferência de arquivos. Não é uma tecnologia nem uma dependência: nesta pasta o projeto está descompactado e pronto para execução.
-
 ## Referências técnicas
 
 - [FastAPI](https://fastapi.tiangolo.com/): API e validação.
