@@ -2,6 +2,16 @@
 
 A versão online usa Render Free para executar a interface e o servidor e Supabase Free para PostgreSQL. As fotografias ficam no mesmo banco, em um esquema privado chamado vialivre. O aplicativo acessa esse esquema por uma conta limitada às tabelas do projeto; o navegador não recebe a senha do banco.
 
+## Site publicado
+
+- Endereço: https://gs-vialivre.onrender.com
+- Painel do servidor: https://dashboard.render.com/web/srv-dbt5tmm1egvs73fgsv90
+- Painel do banco: https://supabase.com/dashboard/project/jmnywhglkuzeoqprnkkz
+- Consulta pública sem login; use **Entrar** para acessar a conta de revisor.
+- O usuário está em `ADMIN_USERNAME` e a senha em `ADMIN_PASSWORD`, no arquivo local `.env.deploy`. O código para convidar colaboradores está em `REGISTRATION_CODE`. Compartilhe apenas o convite com os colaboradores, nunca o arquivo inteiro.
+
+O serviço foi criado diretamente no Render, no plano Free. A configuração ativa fica no painel; `render.yaml` é um modelo de implantação, não um Blueprint vinculado a esse serviço. A publicação inicial foi verificada em 15/11/2026, com conexão ao PostgreSQL, login, sessão protegida e logout. A chave de classificação está configurada; uma nova chamada ao provedor a partir do servidor hospedado ainda não foi testada.
+
 ## Limites da edição
 
 - Consulta pública de ocorrências validadas.

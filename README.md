@@ -2,6 +2,8 @@
 
 Plataforma de monitoramento da acessibilidade urbana — CitizenTech / FIAP.
 
+**Acessar online:** https://gs-vialivre.onrender.com — não é necessário manter o computador ligado. A consulta é pública; o envio exige uma conta por convite e a revisão exige a conta de revisor. No plano gratuito, a primeira abertura após inatividade pode levar cerca de um minuto.
+
 O projeto pode ser executado localmente ou hospedado com servidor Python no Render Free e banco PostgreSQL no Supabase Free. Consulte [implantação online](docs/ONLINE.md) para contas, permissões, configuração e limites. A versão online usa HTTPS, login e cadastro de colaboradores por convite.
 
 ## Abrir no Windows
@@ -50,7 +52,7 @@ A interface usa HTML, CSS e JavaScript, sem compilação. Ela envia solicitaçõ
 
 A integração de fotografia é chamada somente pelo servidor, via HTTPS, com saída estruturada em categoria e descrição. A chave nunca é entregue ao navegador. O resultado recebido fica vinculado à fotografia e precisa de conferência humana. Não há processamento remoto durante o cadastro manual.
 
-SQLite foi adotado para concluir a etapa local sem conta de nuvem. A proposta de armazenamento em nuvem permanece uma evolução futura. Consulte [arquitetura](docs/ARQUITETURA.md) e [roteiro de apresentação](docs/ROTEIRO.md).
+SQLite atende à execução local. A versão publicada usa PostgreSQL no Supabase para preservar registros e fotografias entre reinicializações do servidor. Consulte [arquitetura](docs/ARQUITETURA.md) e [roteiro de apresentação](docs/ROTEIRO.md).
 
 ## Testes
 

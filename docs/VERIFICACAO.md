@@ -1,4 +1,4 @@
-# Verificação da entrega local
+# Verificação da entrega
 
 Data: 15/11/2026.
 
@@ -14,4 +14,14 @@ Testes manuais: o responsável pelo projeto confirmou o funcionamento da anális
 - 23 testes da API: 15 de regras existentes e 8 de contas, sessões, permissões, privacidade, cotas e bloqueios de configuração inadequada.
 - 6 testes de regras da interface.
 - Navegador: cadastro por convite, autenticação, envio privado, revisão autorizada, consulta pública e layout de celular.
-- PostgreSQL remoto: conexão TLS pelo Session pooler, permissões da conta limitada, inserção, leitura, atualização e rollback verificados sem deixar dados de teste. A implantação do servidor ainda deve ser verificada no destino.
+- PostgreSQL remoto: conexão TLS pelo Session pooler, permissões da conta limitada, inserção, leitura, atualização e rollback verificados sem deixar dados de teste.
+
+## Publicação verificada
+
+- Endereço: https://gs-vialivre.onrender.com, plano Render Free, banco Supabase Free.
+- Implantação `dep-dbt5tn61egvs73fgt0ag`, commit `a7e1884`, concluída com estado `live` em 15/11/2026 (horário de São Paulo).
+- Página inicial e `/api/health` responderam com sucesso; modo online, armazenamento PostgreSQL e classificação configurada.
+- Consulta pública, bloqueio de alteração sem login, autenticação do revisor, sessão com cookie Secure/HttpOnly/SameSite, bloqueio de origem externa e logout verificados no endereço publicado.
+- Nenhuma ocorrência criada ou alterada por essa verificação.
+- Navegador separado no endereço publicado: interface pública, formulário de login, ausência de controles de revisão para visitante e largura de 390 pixels sem transbordamento ou erros JavaScript.
+- A classificação externa foi confirmada anteriormente pelo responsável na versão local. A configuração está presente no servidor publicado, mas uma chamada real a partir dele ainda não foi exercitada.
