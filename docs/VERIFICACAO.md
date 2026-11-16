@@ -14,4 +14,4 @@ Testes manuais: o responsável pelo projeto confirmou o funcionamento da anális
 - 23 testes da API: 15 de regras existentes e 8 de contas, sessões, permissões, privacidade, cotas e bloqueios de configuração inadequada.
 - 6 testes de regras da interface.
 - Navegador: cadastro por convite, autenticação, envio privado, revisão autorizada, consulta pública e layout de celular.
-- O armazenamento PostgreSQL e a implantação remota precisam de verificação no destino antes de declarar a publicação concluída.
+- PostgreSQL remoto: conexão TLS pelo Session pooler, permissões da conta limitada, inserção, leitura, atualização e rollback verificados sem deixar dados de teste. A implantação do servidor ainda deve ser verificada no destino.
